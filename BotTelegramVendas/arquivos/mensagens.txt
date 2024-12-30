@@ -1,0 +1,16 @@
+  // mensagem com formatação HTML
+  await ctx.reply(messageWelcome, { parse_mode: 'HTML' });
+
+  const imageUrl = 'https://imgur.com/a/DKxJgp6'; // colocar url da imagem (serve para o pix)
+  await ctx.replyWithPhoto(imageUrl, {});
+  // botões pra o usuário interagir
+  await ctx.reply('Escolha uma opção:', {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '📦 COMPRAR', callback_data: 'comprar' },
+          { text: '💸 ADD SALDO', callback_data: 'add saldo' }
+        ]
+      ]
+    }
+  });

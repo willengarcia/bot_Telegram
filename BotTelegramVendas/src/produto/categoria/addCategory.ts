@@ -6,7 +6,7 @@ interface DadosCategory {
 
 const prisma = new PrismaClient();
 
-class AddCateogry {
+class AddCategory {
     async execute({
         name
     }: DadosCategory) {
@@ -19,14 +19,14 @@ class AddCateogry {
             });
 
             if (existCategory) {
-                console.log('Cliente já existe')
+                console.log('Categoria já existe')
                 return {
                     idCategory: existCategory.id,
                     name:existCategory.name
                 };
             }
 
-            // Cria um novo cliente
+            // Cria uma nova Category
             const createCategory = await prisma.category.create({
                 data: {
                   name:name
@@ -37,6 +37,7 @@ class AddCateogry {
             });
 
             return {
+                sucess:true,
                 nameCategory:createCategory.name,
                 idCategory:createCategory.id
             };
@@ -48,4 +49,4 @@ class AddCateogry {
     }
 }
 
-export { AddCateogry };
+export { AddCategory };
