@@ -1,22 +1,22 @@
 import { PrismaClient } from '@prisma/client';
 
 interface DadosCategory {
-    nameCategory: string;
-    idCategory:number;
+    newName: string;
+    idCategoryReference: string;
 }
 
 const prisma = new PrismaClient();
 
 class EditCategory {
     async execute({
-        nameCategory,
-        idCategory
+        newName,
+        idCategoryReference
     }: DadosCategory) {
         try {
             // categoria existe
             const existCategory = await prisma.category.findFirst({
                 where: {
-                    name: nameCategory,
+                    name: newName,
                 }
             });
             
@@ -32,10 +32,10 @@ class EditCategory {
             // Editar Categoria
             const editCategory = await prisma.category.update({
                 where:{
-                    id:idCategory,
+                    id:Number(idCategoryReference),
                 },
                 data:{
-                    name: nameCategory
+                    name: newName
                 }
             });
 

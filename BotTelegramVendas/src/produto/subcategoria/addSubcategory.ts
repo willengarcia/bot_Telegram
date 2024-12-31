@@ -25,7 +25,8 @@ class AddSubCategory {
                 return {
                     sucess:false,
                     idSubCategory: existSubCategory.id,
-                    name:existSubCategory.name
+                    name:existSubCategory.name,
+                    
                 };
             }
 
