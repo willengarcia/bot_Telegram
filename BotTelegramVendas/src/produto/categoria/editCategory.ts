@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 
 interface DadosCategory {
     newName: string;
-    idCategoryReference: string;
+    idCategoryReference: number;
 }
 
 const prisma = new PrismaClient();
@@ -32,7 +32,7 @@ class EditCategory {
             // Editar Categoria
             const editCategory = await prisma.category.update({
                 where:{
-                    id:Number(idCategoryReference),
+                    id:idCategoryReference,
                 },
                 data:{
                     name: newName
