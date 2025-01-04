@@ -1,4 +1,4 @@
-import { Telegraf, Context, session } from 'telegraf';
+import { Telegraf, Scenes, session, Markup, Context, Middleware } from 'telegraf';
 import { AddClient } from './client/addClient';
 import { AddCategory } from './produto/categoria/addCategory';
 import { FindAllCategory } from './produto/categoria/findAllCategory';
@@ -6,46 +6,56 @@ import { AddSubCategory } from './produto/subcategoria/addSubCategory';
 import { FindAllSubCategoryToCategory } from './produto/subcategoria/findAllSubCategoryToCategory';
 import { EditCategory } from './produto/categoria/editCategory';
 import { EditSubCategory } from './produto/subcategoria/editSubCategory';
+import { stringify, StringifyOptions } from 'querystring';
+import { waitForDebugger } from 'inspector';
 
 const api = process.env.TOKEN_API || "";
-interface SessionData {
-  idCategoryReference: number | null;
-  idSubCategory: number | null;
-  username: string;
-  userId: string;
+// Defina o tipo correto para a sessão
+interface MySessionData {
+  categoryId?: number;
+  subcategoryId?:number;
+  userName?: string;
+  idUser?:string;
+  idSentMessage?:number;
 }
-interface MyContext extends Context{
-  session?: SessionData;
-  match?: RegExpMatchArray; // Adiciona 'match' ao contexto
+
+// Ajuste a interface MyContext para herdar do SceneContext corretamente
+interface MyContext extends Scenes.SceneContext {
+  session: MySessionData & Scenes.SceneSession;
+  match?:RegExpMatchArray
 }
 const bot = new Telegraf<MyContext>(api);
-bot.use(session());
 
+// Definindo o Stage
+const { BaseScene, Stage } = Scenes;
+
+// Criação do Stage e registro das cenas
+const stage = new Stage<MyContext>(); // Criação do Stage tipado
+
+// Use o middleware do Stage
+bot.use(session());
+bot.use(stage.middleware());
 // ====================== Utilitários ==========================
 const renderInitialMenu = async (ctx: MyContext) => {
-  await ctx.reply(`Olá ${ctx.session?.username}, escolha uma ação:`, {
-    reply_markup: {
-      inline_keyboard: [
-        [
-          { text: 'Add Categoria', callback_data: 'add_categoria' },
-          { text: 'List Categoria', callback_data: 'list_categoria' },
-        ],
+  const userName = ctx.session.userName
+  const message = await ctx.reply(`Olá ${userName ?? 'Usuário'}, escolha uma ação:`, {
+    reply_markup: Markup.inlineKeyboard([
+      [
+        { text: 'Add Categoria', callback_data: 'add_categoria' },
+        { text: 'List Categoria', callback_data: 'list_categoria' },
       ],
-    },
+    ]).reply_markup,
   });
-  console.log('Renderização Inicial \d')
+  ctx.session.idSentMessage = message.message_id
+  ctx.scene.leave()
+  await ctx.deleteMessage()
 };
 
-const welcomeMessage = async (ctx: MyContext, userData) => {
+const welcomeMessage = async (ctx: MyContext) => {
   const userId = String(ctx.from?.id);
   const username = String(ctx.from?.first_name);
-
-  ctx.session = {
-    idCategoryReference: null,
-    idSubCategory: null,
-    username,
-    userId,
-  };
+  ctx.session.userName = username
+  ctx.session.idUser = userId
 
   const addClient = new AddClient();
   const clientData = await addClient.execute({ userId, username });
@@ -55,79 +65,71 @@ const welcomeMessage = async (ctx: MyContext, userData) => {
   } else {
     const welcomeMessage = `
     <b>Olá, ${username}! Seja bem-vindo(a)!</b>
-    <b>Você está no sua loja aqui Bot</b>
-    <b>Garantimos Acesso em Todos os Logins ✅</b>
-    <b>Logins De Alta Qualidade Para Aprovação ✅</b>
-    <b>Garantia de Pedidos No Login ou Reembolso ✅</b>
-    <b>Canal: @njfnsjdnf</b>
-    <b>Suporte: @seulink</b>
-    <b>🧾 Seu perfil:</b>
-    <b>├👤 ID:</b> <code>${userId}</code>
-    <b>├💸 Saldo: R$${clientData?.saldo}</b>
-    <b>├💎 Pontos: R$${clientData?.bonus}</b>
-    <b>└💸 Saldo Em Dobro: 25.00%</b>`;
+    <b>Você está no Sua Loja Aqui Bot</b>
+    <b>Garantimos Acesso em Todos os Logins ✅</b>`;
 
     await ctx.reply(welcomeMessage, { parse_mode: 'HTML' });
     await ctx.replyWithPhoto('https://imgur.com/a/DKxJgp6');
     await ctx.reply('Escolha uma opção:', {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '📦 COMPRAR', callback_data: 'comprar' },
-            { text: '💸 ADD SALDO', callback_data: 'add_saldo' },
-          ],
+      reply_markup: Markup.inlineKeyboard([
+        [
+          { text: '📦 COMPRAR', callback_data: 'comprar' },
+          { text: '💸 ADD SALDO', callback_data: 'add_saldo' },
         ],
-      },
+      ]).reply_markup,
     });
   }
 };
 
-const resetSession = (ctx: MyContext) => {
-  if (ctx.session) {
-    ctx.session.idCategoryReference = null;
-    ctx.session.idSubCategory = null;
-  }
-  console.log('Resetado o IdCategoryReference e IdSubCategory')
-};
-
-const handleAddCategory = async (ctx: MyContext) => {
-  await ctx.reply('Por favor, envie o nome da nova categoria:', );
-  bot.on('text', async (textCtx: MyContext) =>{
-    const name = (textCtx.message as any).text.trim();
-    try{
-      const addCategory = new AddCategory();
-      await addCategory.execute({name})
-      await textCtx.reply(`Categoria ${name} adicionada com sucesso!`, {
-        reply_markup:{
-          inline_keyboard:[[{ text: 'Voltar', callback_data: 'voltar_inicial'}]]
-        }
-      })
-    } catch(error) {
-      console.error('Erro: '+error)
+// ====================== Cenas ==========================
+const handleAddCategory = new BaseScene<MyContext>('addCategoria');
+handleAddCategory.enter(async (ctx) => {
+  const message = await ctx.reply('Por favor, envie o nome da nova categoria:');
+  // Apaga a mensagem após 5 segundos
+  setTimeout(async () => {
+    try {
+      await ctx.deleteMessage(message.message_id);
+    } catch (error) {
+      console.error('Erro ao deletar a mensagem:', error);
     }
-  })
-};
-
-const handleListCategory = async (ctx: MyContext) => {
+  }, 5000);
+});
+handleAddCategory.on('text', async (ctx) => {
+  const name = ctx.message.text.trim();
   try {
-    // Exclui a mensagem anterior e responde ao callback
+    const addCategory = new AddCategory();
+    await addCategory.execute({ name });
+    await ctx.reply(`Categoria "${name}" adicionada com sucesso!`, {
+      reply_markup: Markup.inlineKeyboard([
+        [{ text: 'Voltar', callback_data: 'voltar_inicial' }],
+      ]).reply_markup,
+    });
+    ctx.scene.leave();
     await ctx.deleteMessage();
-    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error('Erro ao adicionar categoria:', error);
+    await ctx.reply('Erro ao adicionar a categoria. Tente novamente.');
+    ctx.scene.leave(); // Sempre saia da cena para evitar loops
+  }
+});
 
-    // Obtém as categorias
+const handleListCategory = new BaseScene<MyContext>('listCategoria');
+handleListCategory.enter(async (ctx) =>{
+  try {
     const findAllCategory = new FindAllCategory();
     const executeCategory = await findAllCategory.execute();
-
-    // Verifica se há categorias disponíveis
     if (!executeCategory.find || executeCategory.find.length === 0) {
       await ctx.reply('Nenhuma categoria encontrada no momento.', {
-        reply_markup: {
-          inline_keyboard: [[{ text: 'Voltar', callback_data: 'voltar_inicial' }]],
-        },
+        reply_markup: Markup.inlineKeyboard([
+          [
+            {text: 'Voltar', callback_data:'voltar_inicial'}
+          ]
+        ]).reply_markup,
       });
+      ctx.scene.leave();
+      await ctx.deleteMessage()
       return;
     }
-
     // Gera os botões das categorias
     const categoryButtons = executeCategory.find.map((category) => [
       {
@@ -135,344 +137,325 @@ const handleListCategory = async (ctx: MyContext) => {
         callback_data: `categoria_options_${category.id}`,
       },
     ]);
-
     // Adiciona botão de voltar
     categoryButtons.push([{ text: 'Voltar', callback_data: 'voltar_inicial' }]);
-
-    // Envia a lista de categorias como botões
-    await ctx.reply('Escolha uma categoria:', {
-      reply_markup: { inline_keyboard: categoryButtons },
-    });
-
+    await ctx.reply('Selecione uma Categoria',  {
+      reply_markup: Markup.inlineKeyboard(categoryButtons).reply_markup,
+    })
+    ctx.scene.leave();
+    await ctx.deleteMessage()
   } catch (error) {
-    // Loga o erro no console e informa ao usuário
-    console.error('Erro ao listar categorias:', error);
-    await ctx.reply('Houve um erro ao listar as categorias. Tente novamente mais tarde.');
-  } finally {
-    resetSession(ctx)
+    console.error('Erro ao adicionar Listar a Categoria:', error);
+    await ctx.reply('Erro ao Listar a categoria. Tente novamente.');
+    ctx.scene.leave();
   }
-};
+})
 
-const handleAddSubCategory = async (ctx: MyContext) => {
-  const userId = String(ctx.from?.id);
-  const username = String(ctx.from?.first_name);
-  const categoryId = Number(ctx.match[1]);
-
-  // Inicializa a sessão do usuário
-  ctx.session = {
-    idCategoryReference: categoryId,
-    idSubCategory: null,
-    userId,
-    username,
-  };
-
-  console.log('Adicionar Subcategoria'); 
+const handleCategoryOptions = new BaseScene<MyContext>('categoryOptions');
+handleCategoryOptions.enter(async (ctx) => {
+  const userName = ctx.session.userName
   try {
-    console.log('ID da categoria de referência addSubcategory:', categoryId);
-    // Solicita o nome da subcategoria
-    await ctx.reply('Por favor, envie o nome da nova subcategoria.');
-    // Registra o ouvinte
-    process.once('text', async (textCtx: MyContext) => {
-      const nameSubCategory = (textCtx.message as any).text.trim();
-      console.log('Nome da subcategoria:', nameSubCategory);
-
-      try {
-        // Lógica para adicionar subcategoria
-        const addSubCategory = new AddSubCategory();
-        const execute = await addSubCategory.execute({
-          nameSubCategory,
-          idCategoryReference: categoryId,
-        });
-
-        // Envia a resposta ao usuário
-        const message = execute.sucess
-          ? `Subcategoria "${nameSubCategory}" adicionada com sucesso!`
-          : `Subcategoria já existe. Nome: ${execute.name}`;
-
-        await textCtx.reply(message, {
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: 'Voltar', callback_data: 'list_categoria' }],
-            ],
-          },
-        });
-
-        console.log('Subcategoria adicionada para a categoria:', categoryId);
-      } catch (error) {
-        console.error('Erro ao adicionar subcategoria:', error);
-        await textCtx.reply('Houve um erro ao adicionar a subcategoria. Tente novamente mais tarde.');
-      }
+    const idCategoryReference = ctx.session.categoryId; 
+    await ctx.reply(`Olá ${userName ?? 'Usuário'}, escolha uma ação:`, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          { text: 'Adicionar Subcategoria', callback_data: `add_subcategoria_${idCategoryReference}` },
+          { text: 'Listar Subcategorias', callback_data: `list_subcategoria_${idCategoryReference}` },
+          { text: 'Editar Categoria', callback_data: `edit_categoria_${idCategoryReference}` }
+        ],
+      ]).reply_markup,
     });
-    console.log('Ignorado o texto ouvinte')
-  } catch (error) {
-    console.error('Erro no handleAddSubCategory:', error);
-    await ctx.reply('Houve um erro ao processar sua solicitação. Por favor, tente novamente.');
-  } finally{
-    console.log('Finalizando add subcategoria')
-  }
-};
-
-const handleListSubCategory = async (ctx: MyContext) => {
-  try {
-    // Certifica-se de que 'match' existe antes de acessar
-    if (!ctx.match || ctx.match.length < 2) {
-      throw new Error('ID da categoria não encontrado no callback.');
-    }
-
-    // Obtém o ID da categoria do callback
-    const idCategoryReference = Number(ctx.match[1]);
-    if (isNaN(idCategoryReference)) {
-      throw new Error('ID da categoria inválido.');
-    }
-
+    ctx.scene.leave();
     await ctx.deleteMessage();
-    await ctx.answerCbQuery();
+  } catch (error) {
+    console.error('Erro ao listar opções:', error);
+    await ctx.reply('Erro ao listar as opções. Tente novamente.');
+    ctx.scene.leave();
+  }
+});
 
-    const findAllSubCategory = new FindAllSubCategoryToCategory();
-    const executeSubCategory = await findAllSubCategory.execute({ idCategoryReference });
+const handleAddSubCategory = new BaseScene<MyContext>('addSubcategory');
+handleAddSubCategory.enter(async (ctx) => {
+  const message = await ctx.reply('Por favor, envie o nome da nova subcategoria:');
+  setTimeout(async () => {
+    try {
+      await ctx.deleteMessage(message.message_id);
+    } catch (error) {
+      console.error('Erro ao deletar a mensagem:', error);
+    }
+  }, 5000);
+});
+handleAddSubCategory.on('text', async (ctx) =>{
+  const idCategoryReference = ctx.session.categoryId;
+  const nameSubCategory = ctx.message.text.trim();
+  try {
+    // Lógica para adicionar subcategoria
+    const addSubCategory = new AddSubCategory();
+    const execute = await addSubCategory.execute({
+      nameSubCategory,
+      idCategoryReference,
+    });
 
-    // Cria botões para subcategorias
-    const subCategoryButtons = executeSubCategory.find.map((subCategory) => [
+    // Envia a resposta ao usuário
+    const message = execute.sucess
+      ? `Subcategoria "${nameSubCategory}" adicionada com sucesso!`
+      : `Subcategoria já existe. Nome: ${execute.name}`;
+
+    await ctx.reply(message, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          {text: 'Voltar', callback_data: 'voltar_inicial'}
+        ]
+      ]).reply_markup,
+    });
+    ctx.scene.leave();
+    await ctx.deleteMessage();
+  } catch (error) {
+    console.error('Erro ao adicionar subcategoria:', error);
+    await ctx.reply('Erro ao adicionar a subcategoria. Tente novamente.');
+    ctx.scene.leave();
+  }
+});
+
+const handleListSubCategory = new BaseScene<MyContext>('listSubcategory');
+handleListSubCategory.enter(async (ctx) => {
+  try {
+    const idCategoryReference = ctx.session.categoryId;
+    const findAllSubToCategory  = new FindAllSubCategoryToCategory();
+    const executeCategory = await findAllSubToCategory.execute({idCategoryReference});
+    if (!executeCategory.find || executeCategory.find.length === 0) {
+      await ctx.reply('Nenhuma categoria encontrada no momento.', {
+        reply_markup: Markup.inlineKeyboard([
+          [
+            {text: 'Voltar', callback_data:'voltar_inicial'}
+          ]
+        ]).reply_markup,
+      });
+      ctx.scene.leave();
+      return;
+    }
+    // Gera os botões das categorias
+    const categoryButtons = executeCategory.find.map((category) => [
       {
-        text: subCategory.name,
-        callback_data: `subcategoria_options_${subCategory.id}`,
+        text: category.name,
+        callback_data: `option_subcategoria_${category.id}`,
       },
     ]);
-
-    await ctx.reply('Escolha uma subcategoria:', {
-      reply_markup: {
-        inline_keyboard: [
-          ...subCategoryButtons,
-          [{ text: 'Voltar', callback_data: 'list_categoria' }],
-        ],
-      },
-    });
-  } catch (error) {
-    console.error('Erro ao listar subcategorias:', error.message);
-    await ctx.reply('Houve um erro ao listar as subcategorias. Tente novamente mais tarde.');
-  } finally {
-    console.log(ctx.session)
-    resetSession(ctx)
-  }
-};
-
-const handleCategoryOptions = async (ctx: MyContext) => {
-  try {
+    // Adiciona botão de voltar
+    categoryButtons.push([{ text: 'Voltar', callback_data: 'voltar_inicial' }]);
+    await ctx.reply('Selecione uma Subcategoria',  {
+      reply_markup: Markup.inlineKeyboard([...categoryButtons]).reply_markup,
+    })
+    ctx.scene.leave();
     await ctx.deleteMessage();
-    await ctx.answerCbQuery();
-    const IdCategoryReference = Number(ctx.match[1]);
-    ctx.session = {
-      idCategoryReference:  IdCategoryReference,
-      idSubCategory: null,
-      username: String(ctx.from?.first_name),
-      userId: String(ctx.from?.id)
-    };
-    // Envia as opções para o usuário
-    await ctx.reply('Escolha uma ação:', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Adicionar Subcategoria', callback_data: `subAdd_${ctx.session.idCategoryReference}` }],
-          // [{ text: 'Listar Subcategorias', callback_data: `list_subcategoria_${idCategoryReference}` }],
-          // [{ text: 'Editar Categoria', callback_data: `edit_categoria_${idCategoryReference}` }],
-          // [{ text: 'Voltar', callback_data: 'list_categoria' }],
-        ],
-      },
-    });
-
-    console.log(`ID da categoria na category options: ${IdCategoryReference}`);
   } catch (error) {
-    console.error('Erro no handleCategoryOptions:', error.message);
-    await ctx.reply('Houve um erro ao processar a solicitação. Tente novamente mais tarde.');
-  } finally {
-    console.log('Categoria de Referencia: '+ ctx.session.idCategoryReference)
+    console.error('Erro ao adicionar Listar a Categoria:', error);
+    await ctx.reply('Erro ao Listar a categoria. Tente novamente.');
+    ctx.scene.leave();
   }
-};
+})
 
-const handleSubCategoryOptions = async (ctx: MyContext) => {
+const handleSubcategoryOptions = new BaseScene<MyContext>('subcategoryOptions');
+handleSubcategoryOptions.enter(async (ctx) => {
   try {
-    // Verifica se ctx.match existe e contém o ID da subcategoria
-    if (!ctx.match || ctx.match.length < 2) {
-      throw new Error('ID da subcategoria não encontrado no callback.');
-    }
-
-    // Obtém o ID da subcategoria
-    const idSubCategory = ctx.match[1];
-    if (!idSubCategory) {
-      throw new Error('ID da subcategoria inválido.');
-    }
-
-    await ctx.deleteMessage();
-    await ctx.answerCbQuery();
-
-    // Envia as opções para o usuário
-    await ctx.reply('Escolha uma ação:', {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: 'Adicionar Produto', callback_data: `add_produto_${idSubCategory}` }],
-          [{ text: 'Listar Produtos', callback_data: `list_produto_${idSubCategory}` }],
-          [{ text: 'Editar Subcategoria', callback_data: `edit_subcategoria_${idSubCategory}` }],
-          [{ text: 'Voltar', callback_data: 'list_categoria' }],
+    const idSubCategoryReference = ctx.session.subcategoryId; 
+    await ctx.reply(`Olá ${ctx.session?.userName ?? 'Usuário'}, escolha uma ação para subcategoria:`, {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          { text: 'Adicionar Produto', callback_data: `add_produto_${idSubCategoryReference}` },
+          { text: 'Listar produto', callback_data: `list_Produto_${idSubCategoryReference}` },
+          { text: 'Editar subcategoria', callback_data: `edit_subcategoria_${idSubCategoryReference}` },
         ],
-      },
+      ]).reply_markup,
     });
-
-    console.log(`ID da subcategoria: ${idSubCategory}`);
+    ctx.scene.leave();
+    await ctx.deleteMessage();
   } catch (error) {
-    console.error('Erro no handleSubCategoryOptions:', error.message);
-    await ctx.reply('Houve um erro ao processar a solicitação. Tente novamente mais tarde.');
-  } finally {
-    console.log(ctx.session)
-    resetSession(ctx)
+    console.error('Erro ao listar opções:', error);
+    await ctx.reply('Erro ao listar as opções. Tente novamente.');
+    ctx.scene.leave();
   }
-};
+});
 
-const handleEditCategory = async (ctx: MyContext) => {
-  await ctx.deleteMessage();
-  await ctx.answerCbQuery();
-
-  // Verifica se a referência da categoria está definida
-  if (!ctx.session || !ctx.session.idCategoryReference) {
-    await ctx.reply('Não foi possível encontrar a categoria selecionada. Tente novamente.');
+const handleEditCategory = new BaseScene<MyContext>('editCategory');
+handleEditCategory.enter(async (ctx) =>{
+  await ctx.reply('Digite o novo nome para categoria que selecionou!')
+})
+handleEditCategory.on('text', async (ctx) =>{
+  const newName = (ctx.message as any).text;
+  const idCategoryReference = ctx.session.categoryId;
+  
+  if (!newName || newName.trim().length === 0) {
+    await ctx.reply('O nome da categoria não pode ser vazio. Tente novamente.');
     return;
   }
 
-  const idCategoryReference = ctx.session.idCategoryReference;
-
-  const sentMessage = await ctx.reply(`Por favor, envie o novo nome para a categoria que selecionou:`);
-
-  // Usando `once` para escutar apenas a próxima mensagem
-  bot.on('text', async (textCtx: Context) => {
-    const newName = (textCtx.message as any).text;
-
-    if (!newName || newName.trim().length === 0) {
-      await textCtx.reply('O nome da categoria não pode ser vazio. Tente novamente.');
-      return;
-    }
-
-    try {
-      const editCategory = new EditCategory();
-      await editCategory.execute({ idCategoryReference, newName });
-
-      // Deletar a mensagem inicial de solicitação
-      await ctx.deleteMessage(sentMessage.message_id);
-
-      // Responder ao usuário com a confirmação
-      await textCtx.reply(`Categoria editada com sucesso!`, {
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: 'Voltar', callback_data: 'voltar_inicial' },
-            ],
+  try {
+    const editCategory = new EditCategory();
+    await editCategory.execute({ idCategoryReference, newName });
+    await ctx.reply(`Categoria editada com sucesso!`, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'Voltar', callback_data: 'voltar_inicial' },
           ],
-        },
-      });
-    } catch (error) {
-      console.error('Erro ao editar categoria:', error);
-      await textCtx.reply('Houve um erro ao editar a categoria. Tente novamente mais tarde.');
-    }
-    finally {
-      console.log(ctx.session)
-      resetSession(ctx)
-    }
-  });
-};
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('Erro ao editar categoria:', error);
+    await ctx.reply('Houve um erro ao editar a categoria. Tente novamente mais tarde.');
+  }
+})
 
-const handleEditSubCategory = async (ctx: MyContext) => {
-  const idSubCategory = Number(ctx.match[1]); // Obter ID da subcategoria da callback data
-  console.log('Subcategoria selecionada: ' + idSubCategory);
-
-  await ctx.deleteMessage();
-  await ctx.answerCbQuery();
-
-  // Envia mensagem pedindo o novo nome
-  const sentMessage = await ctx.reply(
-    'Por favor, envie o novo nome para a subcategoria selecionada.'
-  );
-
-  // Variável para garantir que só escutaremos uma vez
-  const onceListener = async (textCtx: Context) => {
-    const nameSubCategory = (textCtx.message as any).text;
-
-    // Verifica se o nome da subcategoria é válido
-    if (!nameSubCategory || nameSubCategory.trim().length === 0) {
-      await textCtx.reply('O nome não pode estar vazio. Tente novamente.');
-      return;
-    }
-
-    try {
-      // Chama o método para editar a subcategoria
-      const editSubCategory = new EditSubCategory();
-      await editSubCategory.execute({ idSubCategory, nameSubCategory });
-
-      // Deleta a mensagem que solicitava o novo nome
-      await ctx.deleteMessage(sentMessage.message_id);
-
-      // Responde com a confirmação de sucesso
-      await textCtx.reply(`Subcategoria "${nameSubCategory}" editada com sucesso!`, {
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: 'Voltar', callback_data: 'voltar_inicial' }],
-          ],
-        },
-      });
-
-      console.log('Subcategoria alterada: ' + idSubCategory);
-    } catch (error) {
-      console.error('Erro ao editar a subcategoria:', error);
-
-      // Informa o usuário sobre o erro
-      await textCtx.reply(
-        'Houve um erro ao editar a subcategoria. Tente novamente mais tarde.'
-      );
-    } finally {
-      console.log(ctx.session)
-      resetSession(ctx)
-    }
-  };
-
-  // Registra o listener apenas para esta ação
-  bot.on('text', onceListener);
-};
-
-const handleBackToInitialMenu = async (ctx: MyContext) => {
-  // Limpa as variáveis de referência da categoria e subcategoria
-  if (ctx.session) {
-    ctx.session.idCategoryReference = null;
-    ctx.session.idSubCategory = null;
+const handleEditSubcategory = new BaseScene<MyContext>('editSubcategory');
+handleEditSubcategory.enter(async (ctx) =>{
+  await ctx.reply('Digite o novo nome para subcategoria que selecionou!')
+})
+handleEditSubcategory.on('text', async (ctx) =>{
+  const nameSubCategory = (ctx.message as any).text;
+  const idSubCategory = ctx.session.subcategoryId;
+  // Verifica se o nome da subcategoria é válido
+  if (!nameSubCategory || nameSubCategory.trim().length === 0) {
+    await ctx.reply('O nome não pode estar vazio. Tente novamente.');
+    return;
   }
 
-  // Deleta a mensagem anterior
-  await ctx.deleteMessage();
-  
-  // Exibe o menu inicial
-  await renderInitialMenu(ctx);
-};
+  try {
+    // Chama o método para editar a subcategoria
+    const editSubCategory = new EditSubCategory();
+    await editSubCategory.execute({ idSubCategory, nameSubCategory })
 
+    // Responde com a confirmação de sucesso
+    await ctx.reply(`Subcategoria "${nameSubCategory}" editada com sucesso!`, {
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: 'Voltar', callback_data: 'voltar_inicial' }],
+        ],
+      },
+    });
+
+    console.log('Subcategoria alterada: ' + idSubCategory);
+  } catch (error) {
+    console.error('Erro ao editar a subcategoria:', error);
+    await ctx.reply(
+      'Houve um erro ao editar a subcategoria. Tente novamente mais tarde.'
+    );
+  }
+})
+
+stage.register(handleAddCategory);
+stage.register(handleListCategory);
+stage.register(handleCategoryOptions);
+stage.register(handleAddSubCategory);
+stage.register(handleListSubCategory)
+stage.register(handleSubcategoryOptions)
+stage.register(handleEditCategory)
+stage.register(handleEditSubcategory)
 
 // ========================= Ações =====================
 // Inicia o Bot
 bot.start(welcomeMessage);
 // Adiciona Categoria
-bot.action('add_categoria', handleAddCategory);
-// Adiciona a Subcategoria
-bot.action(/subAdd_(\d+)/, handleAddSubCategory);
-// Lista as opçoes da categoria
-bot.action(/categoria_options_(\d+)/, handleCategoryOptions);
-// Lista as Categorias
-bot.action('list_categoria', handleListCategory);
-// Lista a Subcategoria
-bot.action(/list_subcategoria_(\d+)/, handleListSubCategory);
-// Lista as opçoes da Subcategoria clicada
-bot.action(/subcategoria_options_(\d+)/, handleSubCategoryOptions);
+bot.action('add_categoria', async (ctx:MyContext) =>{
+  // Excluir a mensagem anterior
+  if (ctx.session.idSentMessage) {
+    await ctx.deleteMessage(ctx.session.idSentMessage);
+  }
+  ctx.scene.enter('addCategoria')
+})
+// Lista a Categoria
+bot.action('list_categoria', async (ctx:MyContext) =>{
+  ctx.scene.enter('listCategoria')
+}) 
+// Mostra as opções da Categoria
+bot.action(/categoria_options_(\d+)/, (ctx: MyContext) => {
+  const idCategoryReference = ctx.match[1];
+  if (!idCategoryReference) {
+    console.error("ID da categoria não encontrado.");
+    return;
+  }
 
-// Edita a Categoria selecionada
-bot.action(/edit_categoria_(\d+)/, handleEditCategory)
-// Edita a Subcategoria selecionada
-bot.action(/edit_subcategoria_(\d+)/, handleEditSubCategory)
+  // Armazenar o idCategoryReference na sessão
+  ctx.session.categoryId = Number(idCategoryReference);
+
+  // Entra na cena 'categoryOptions' e a sessão já contém o idCategoryReference
+  ctx.scene.enter('categoryOptions');
+});
+// Adiciona Subcategoria
+bot.action(/add_subcategoria_(\d+)/, (ctx: MyContext) =>{
+  const idCategoryReference = ctx.match[1];
+  if (!idCategoryReference) {
+    console.error("ID da categoria não encontrado.");
+    return;
+  }
+
+  // Armazenar o idCategoryReference na sessão
+  ctx.session.categoryId = Number(idCategoryReference);
+  ctx.scene.enter('addSubcategory')
+})
+// List Subcategory
+bot.action(/list_subcategoria_(\d+)/, (ctx: MyContext) =>{
+  const idCategoryReference = ctx.match[1];
+  if (!idCategoryReference) {
+    console.error("ID da categoria não encontrado.");
+    return;
+  }
+
+  // Armazenar o idCategoryReference na sessão
+  ctx.session.categoryId = Number(idCategoryReference);
+  ctx.scene.enter('listSubcategory')
+})
+// Mostrar opções da subcategoria
+bot.action(/option_subcategoria_(\d+)/, (ctx: MyContext) =>{
+  const idSubCategoryReference = ctx.match[1]
+  if(!idSubCategoryReference){
+    console.error("ID da subcategoria não encontrado")
+    return;
+  }
+  ctx.session.subcategoryId = Number(idSubCategoryReference);
+  ctx.scene.enter('subcategoryOptions')
+})
+// Editar Categoria
+bot.action(/edit_categoria_(\d+)/, async (ctx:MyContext) =>{
+  // Excluir a mensagem anterior
+  const idCategoryReference = ctx.match[1];
+  if (!idCategoryReference) {
+    console.error("ID da categoria não encontrado.");
+    return;
+  }
+
+  // Armazenar o idCategoryReference na sessão
+  ctx.session.categoryId = Number(idCategoryReference);
+
+  ctx.scene.enter('editCategory')
+})
+bot.action(/edit_subcategoria_(\d+)/, async (ctx:MyContext) =>{
+  // Excluir a mensagem anterior
+  const idSubCategoryReference = ctx.match[1];
+  if (!idSubCategoryReference) {
+    console.error("ID da categoria não encontrado.");
+    return;
+  }
+
+  // Armazenar o idCategoryReference na sessão
+  ctx.session.subcategoryId = Number(idSubCategoryReference);
+
+  ctx.scene.enter('editSubcategory')
+})
+// Voltar ao menu Inicial
+bot.action('voltar_inicial', async (ctx) => {
+  try {
+    await ctx.answerCbQuery(); // Confirma o callback
+    await renderInitialMenu(ctx); // Retorna ao menu inicial
+  } catch (error) {
+    console.error('Erro ao voltar ao menu inicial:', error);
+  }
+});
+
+
 
 // ================ middallware ===============
 
-bot.action('voltar_inicial', handleBackToInitialMenu);
+// bot.action('voltar_inicial', handleBackToInitialMenu);
 bot.launch();
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
