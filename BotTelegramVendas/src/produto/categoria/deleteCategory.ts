@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 
 interface DadosCategory {
-    nameCategory: string;
     idCategory: number;
 }
 
@@ -9,7 +8,6 @@ const prisma = new PrismaClient();
 
 class DeleteCategory {
     async execute({
-        nameCategory,
         idCategory
     }: DadosCategory) {
         try {
@@ -27,17 +25,20 @@ class DeleteCategory {
                 };
             }
 
-            // há produtos na subcategoria?
+            // há produtos na categoria?
             const existItems = await prisma.category.findFirst({
                 where: {
                     id: idCategory,
                     items:{
                         some:{}
+                    },
+                    subCategories:{
+                        some:{}
                     }
                 }
             });
 
-            if (existItems) {
+            if (!existItems) {
                 console.log('Há produtos nessa Categoria')
                 return {
                     sucess:false,
@@ -45,8 +46,6 @@ class DeleteCategory {
                 };
             }
 
-
-            // Cria ua nova categoria
             const deleteCategory = await prisma.category.delete({
                 where:{
                     id:idCategory

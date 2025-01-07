@@ -30,7 +30,7 @@ class DeleteSubCategory {
             }
 
             // deleta subcategoria
-            const deleteSubCategory = await prisma.category.delete({
+            const deleteSubCategory = await prisma.subCategory.delete({
                 where:{
                     id:idSubCategory
                 }
