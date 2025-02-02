@@ -7,9 +7,9 @@ import handleCategoryOptions from '../../controller/produto/Categoria/handleCate
 
 import handleListSubcategory from '../../controller/produto/Subcategoria/handleListSubcategoryController';
 import handleAddSubcategory from '../../controller/produto/Subcategoria/handleAddSubcategoryController';
-import handleDeleteCategory from '../../controller/produto/Subcategoria/handleDeleteCategoryController';
-import handleEditCategory from '../../controller/produto/Subcategoria/handleEditCategoryController';
-import handleCategoryOptions from '../../controller/produto/Subcategoria/handleCategoryOptionsController';
+import handleDeleteSubcategory from '../../controller/produto/Subcategoria/handleDeleteSubcategoryController'
+import handleEditSubcategory from '../../controller/produto/Subcategoria/handleEditSubcategoryController'
+import handleSubcategoryOptions from '../../controller/produto/Subcategoria/handleSubcategoryOptionController'
 import { MyContext } from '../types/MyContext';
 import 'dotenv/config';
 
@@ -29,5 +29,11 @@ stage.register(handleAddCategory)
 stage.register(handleDeleteCategory)
 stage.register(handleEditCategory)
 stage.register(handleCategoryOptions)
+
+stage.register(handleAddSubcategory)
+stage.register(handleListSubcategory)
+stage.register(handleDeleteSubcategory)
+stage.register(handleEditSubcategory)
+stage.register(handleSubcategoryOptions)
 // Exportação do Stage para registro de cenas
 export { stage };
