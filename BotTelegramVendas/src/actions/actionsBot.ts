@@ -113,6 +113,18 @@ bot.action(/delete_subcategory_(\d+)/, async (ctx: MyContext) => {
   ctx.scene.enter('deleteSubcategory');
 });
 
+// Adicionar Produto
+bot.action(/add_produto_(\d+)/, async (ctx: MyContext) => {
+  const idSubCategory = ctx.match[1];
+  if (!idSubCategory) {
+    console.error('ID da categoria não encontrado.');
+    return;
+  }
+
+  ctx.session.categoryId = Number(idSubCategory);
+  ctx.scene.enter('addItem');
+});
+
 // Voltar ao menu Inicial
 bot.action('voltar_inicial', async (ctx: MyContext) => {
   try {

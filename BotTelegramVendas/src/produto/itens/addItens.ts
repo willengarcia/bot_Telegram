@@ -1,55 +1,73 @@
 import { PrismaClient } from '@prisma/client';
 
-interface DadosSubCategory {
-    nameSubCategory: string;
-    idCategoryReference:number;
+interface DadosItem {
+    nameItem: string;
+    idCategoryReference?:number;
+    idSubcateogryReference?:number;
+    price:string;
+    link?:string;
+    imagePath?:string;
 }
 
 const prisma = new PrismaClient();
 
-class AddSubCategory {
+class AddItem {
     async execute({
-        nameSubCategory,
-        idCategoryReference
-    }: DadosSubCategory) {
+        nameItem,
+        idCategoryReference,
+        idSubcateogryReference,
+        price,
+        link,
+        imagePath,
+    }: DadosItem) {
         try {
             // Subcategoria existe
-            const existSubCategory = await prisma.subCategory.findFirst({
+            const existItem = await prisma.item.findFirst({
                 where: {
-                    name: nameSubCategory,
+                    name: nameItem,
                 }
             });
 
-            if (existSubCategory) {
-                console.log('SubCategoria já existe')
+            if (existItem) {
+                console.log('Item já existe!')
                 return {
                     sucess:false,
-                    idSubCategory: existSubCategory.id,
-                    name:existSubCategory.name,
+                    idSubCategory: existItem.id,
+                    name:existItem.name,
                     
                 };
             }
 
             // Cria uma nova categoria
-            const createSubCategory = await prisma.subCategory.create({
+            const createItem = await prisma.item.create({
                 data: {
-                  name:nameSubCategory,
-                  categoryId:idCategoryReference,
+                  name:nameItem,
+                  categoryId:idCategoryReference || null,
+                  subCategoryId:idSubcateogryReference || null,
+                  price:Number(price),
+                  link:link,
+                  imagePath:imagePath
                 }, select:{
+                  id:true,
                   name:true,
-                  id:true
+                  price:true,
+                  link:true,
+                  imagePath:true
                 }
             });
 
             return {
                 sucess:true,
-                nameCategory:createSubCategory.name,
-                idCategory:createSubCategory.id
+                nameItem:createItem.name,
+                idItem:createItem.id,
+                price:createItem.price,
+                link:createItem.link,
+                imagePath:createItem.imagePath
             };
 
         } catch (error) {
             // Tratamento de erro
-            console.error("Erro ao criar cliente:", error);
+            console.error("Erro ao criar Produto:", error);
             return {
                 sucess:false,
                 error:error.message
@@ -58,4 +76,4 @@ class AddSubCategory {
     }
 }
 
-export { AddSubCategory };
+export { AddItem };

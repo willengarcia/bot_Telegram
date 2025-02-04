@@ -1,13 +1,11 @@
 import { Scenes, Markup } from 'telegraf';
 import { MyContext } from '../../../src/types/MyContext';
-import { stage } from '../../../src/config/botConfig';
-import { AddSubCategory } from '../../../src/produto/subcategoria/addSubcategory';
-
+import { AddItem } from '../../../src/produto/itens/addItens'
 const { BaseScene, Stage } = Scenes;
 
-const handleAddSubCategory = new BaseScene<MyContext>('addSubcategory');
-handleAddSubCategory.enter(async (ctx) => {
-  const message = await ctx.reply('Por favor, envie o nome da nova subcategoria:');
+const handleAddItem = new BaseScene<MyContext>('addItem');
+handleAddItem.enter(async (ctx) => {
+  const message = await ctx.reply('Por favor, envie o nome do Produto no seguinte formato: \n produto \n preco \n link \n foto');
   setTimeout(async () => {
     try {
       await ctx.deleteMessage(message.message_id);
@@ -16,21 +14,24 @@ handleAddSubCategory.enter(async (ctx) => {
     }
   }, 5000);
 });
-handleAddSubCategory.on('text', async (ctx) =>{
-  const idCategoryReference = ctx.session.categoryId || 1;
-  const nameSubCategory = ctx.message.text.trim();
+handleAddItem.on('text', async (ctx) =>{
+  const idSubcateogryReference = ctx.session.subcategoryId
+  const [nameItem, price, link, imagePath] = ctx.message.text.trim().split(/\r?\n/);
   try {
     // Lógica para adicionar subcategoria
-    const addSubCategory = new AddSubCategory();
-    const execute = await addSubCategory.execute({
-      nameSubCategory,
-      idCategoryReference,
+    const addItem = new AddItem();
+    const execute = await addItem.execute({
+      nameItem,
+      price,
+      link,
+      imagePath,
+      idSubcateogryReference
     });
 
     // Envia a resposta ao usuário
     const message = execute.sucess
-      ? `Subcategoria "${nameSubCategory}" adicionada com sucesso!`
-      : `Subcategoria já existe. Nome: ${execute.name}`;
+      ? `Produto "${nameItem}" adicionado com sucesso!`
+      : `Produto já existe. Nome: ${execute.name}`;
 
     await ctx.reply(message, {
       reply_markup: Markup.inlineKeyboard([
@@ -42,9 +43,9 @@ handleAddSubCategory.on('text', async (ctx) =>{
     ctx.scene.leave();
     await ctx.deleteMessage();
   } catch (error) {
-    console.error('Erro ao adicionar subcategoria:', error);
-    await ctx.reply('Erro ao adicionar a subcategoria. Tente novamente.');
+    console.error('Erro ao adicionar Produto:', error);
+    await ctx.reply('Erro ao adicionar o Produto. Tente novamente.');
     ctx.scene.leave();
   }
 });
-export default handleAddSubCategory
+export default handleAddItem
