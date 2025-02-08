@@ -1,14 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
-interface DadosSubcategory{
-    idCategoryReference:number;
+interface DadosItens{
+    idSubcategoryReference:number;
 }
-class FindAllSubCategoryToCategory {
-    async execute({idCategoryReference}:DadosSubcategory) {
+class FindAllItemToSubcategory {
+    async execute({idSubcategoryReference}:DadosItens) {
         try {
-            const existSubCategory = await prisma.subCategory.findFirst()
-            if(!existSubCategory){
+            const existItem = await prisma.item.findFirst()
+            if(!existItem){
                 console.log('Não há nenhuma subcategoria cadastrada')
                 return {
                     success:false,
@@ -17,20 +17,23 @@ class FindAllSubCategoryToCategory {
             }
 
             // Pesquisa todas as Subcategorias
-            const findAllSubCategory = await prisma.subCategory.findMany({
+            const findAllItemtoSubcategory = await prisma.item.findMany({
                 where:{
-                    categoryId:idCategoryReference
+                    subCategoryId:idSubcategoryReference
                 },
                 select:{
                     id:true,
                     name:true,
-                    items:true,
+                    imagePath:true,
+                    link:true,
+                    price:true,
+                    sales:true,
                 }
             })
 
             return {
                 sucess: true,
-                find: findAllSubCategory
+                find: findAllItemtoSubcategory
             };
 
         } catch (error) {
@@ -44,4 +47,4 @@ class FindAllSubCategoryToCategory {
     }
 }
 
-export { FindAllSubCategoryToCategory };
+export { FindAllItemToSubcategory };

@@ -1,49 +1,49 @@
 import { PrismaClient } from '@prisma/client';
 
-interface DadosCategory {
-    nameSubCategory: string;
-    idSubCategory:number;
+interface DadosItens {
+    nameItem: string;
+    idItem:number;
 }
 
 const prisma = new PrismaClient();
 
-class EditSubCategory {
+class EditItens {
     async execute({
-        nameSubCategory,
-        idSubCategory
-    }: DadosCategory) {
+        nameItem,
+        idItem
+    }: DadosItens) {
         try {
             // categoria existe
-            const existSubCategory = await prisma.subCategory.findFirst({
+            const existItem = await prisma.item.findFirst({
                 where: {
-                    name: nameSubCategory,
+                    name: nameItem,
                 }
             });
             
             // Possível erro de lógica.
-            if (existSubCategory) {
+            if (existItem) {
                 console.log('Categoria já existe')
                 return {
                     sucess:false,
-                    idCategory: existSubCategory.id,
-                    name:existSubCategory.name
+                    idItem: existItem.id,
+                    name:existItem.name
                 };
             }
 
             // Editar Categoria
-            const editCategory = await prisma.subCategory.update({
+            const editItem = await prisma.item.update({
                 where:{
-                    id:idSubCategory,
+                    id:idItem,
                 },
                 data:{
-                    name: nameSubCategory
+                    name: nameItem
                 }
             });
 
             return {
                 sucess:true,
-                nameCategory:editCategory.name,
-                idCategory:editCategory.id
+                nameCategory:editItem.name,
+                idCategory:editItem.id
             };
 
         } catch (error) {
@@ -57,4 +57,4 @@ class EditSubCategory {
     }
 }
 
-export { EditSubCategory };
+export { EditItens };

@@ -5,14 +5,7 @@ const { BaseScene, Stage } = Scenes;
 
 const handleAddItem = new BaseScene<MyContext>('addItem');
 handleAddItem.enter(async (ctx) => {
-  const message = await ctx.reply('Por favor, envie o nome do Produto no seguinte formato: \n produto \n preco \n link \n foto');
-  setTimeout(async () => {
-    try {
-      await ctx.deleteMessage(message.message_id);
-    } catch (error) {
-      console.error('Erro ao deletar a mensagem:', error);
-    }
-  }, 5000);
+  const message = await ctx.reply('Por favor, envie o nome do Produto no seguinte formato: \n produto \n preco \n link \n foto')
 });
 handleAddItem.on('text', async (ctx) =>{
   const idSubcateogryReference = ctx.session.subcategoryId

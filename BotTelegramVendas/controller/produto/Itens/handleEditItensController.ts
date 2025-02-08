@@ -1,30 +1,29 @@
 import { Scenes, Markup } from 'telegraf';
 import { MyContext } from '../../../src/types/MyContext';
-import { stage } from '../../../src/config/botConfig';
-import { EditSubCategory } from '../../../src/produto/subcategoria/editSubCategory';
+import { EditItens } from '../../../src/produto/itens/editItens';
 
 const { BaseScene, Stage } = Scenes;
 
-const handleEditSubcategory = new BaseScene<MyContext>('editSubcategory');
-handleEditSubcategory.enter(async (ctx) =>{
-  await ctx.reply('Digite o novo nome para subcategoria que selecionou!')
+const handleEditItem = new BaseScene<MyContext>('editItem');
+handleEditItem.enter(async (ctx) =>{
+  await ctx.reply('Digite o novo nome para o Produto que selecionou!')
 })
-handleEditSubcategory.on('text', async (ctx) =>{
-  const nameSubCategory = (ctx.message as any).text;
-  const idSubCategory = ctx.session.subcategoryId || 1;
+handleEditItem.on('text', async (ctx) =>{
+  const nameItem = (ctx.message as any).text;
+  const idItem = ctx.session.idItem || 1;
   // Verifica se o nome da subcategoria é válido
-  if (!nameSubCategory || nameSubCategory.trim().length === 0) {
+  if (!nameItem || nameItem.trim().length === 0) {
     await ctx.reply('O nome não pode estar vazio. Tente novamente.');
     return;
   }
 
   try {
     // Chama o método para editar a subcategoria
-    const editSubCategory = new EditSubCategory();
-    await editSubCategory.execute({ idSubCategory, nameSubCategory })
+    const editItem = new EditItens();
+    await editItem.execute({ idItem, nameItem })
 
     // Responde com a confirmação de sucesso
-    await ctx.reply(`Subcategoria "${nameSubCategory}" editada com sucesso!`, {
+    await ctx.reply(`Produto "${nameItem}" editado com sucesso!`, {
       reply_markup: {
         inline_keyboard: [
           [{ text: 'Voltar', callback_data: 'voltar_inicial' }],
@@ -32,7 +31,7 @@ handleEditSubcategory.on('text', async (ctx) =>{
       },
     });
 
-    console.log('Subcategoria alterada: ' + idSubCategory);
+    console.log('Subcategoria alterada: ' + idItem);
   } catch (error) {
     console.error('Erro ao editar a subcategoria:', error);
     await ctx.reply(
@@ -40,4 +39,4 @@ handleEditSubcategory.on('text', async (ctx) =>{
     );
   }
 })
-export default handleEditSubcategory
+export default handleEditItem

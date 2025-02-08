@@ -6,6 +6,7 @@ export interface MySessionData {
   userName?: string;
   idUser?: string;
   idSentMessage?: number;
+  idItem?:number
 }
 
 // Ajuste a interface MyContext para herdar do SceneContext corretamente

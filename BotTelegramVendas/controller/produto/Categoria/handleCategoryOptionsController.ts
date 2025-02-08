@@ -10,14 +10,14 @@ handleCategoryOptions.enter(async (ctx) => {
   try {
     const idCategoryReference = ctx.session.categoryId; 
     await ctx.reply(`Olá ${userName ?? 'Usuário'}, escolha uma ação:`, {
-      reply_markup: Markup.inlineKeyboard([
-        [
-          { text: 'Adicionar Subcategoria', callback_data: `add_subcategoria_${idCategoryReference}` },
-          { text: 'Listar Subcategorias', callback_data: `list_subcategoria_${idCategoryReference}` },
-          { text: 'Editar Categoria', callback_data: `edit_categoria_${idCategoryReference}` },
-          { text: 'Deletar Categoria', callback_data: `delete_category_${idCategoryReference}` }
-        ],
-      ]).reply_markup,
+      reply_markup: Markup.inlineKeyboard(
+          [
+            [{ text: 'Adicionar Subcategoria', callback_data: `add_subcategoria_${idCategoryReference}` }],
+            [{ text: 'Listar Subcategorias', callback_data: `list_subcategoria_${idCategoryReference}` }],
+            [{ text: 'Editar Categoria', callback_data: `edit_categoria_${idCategoryReference}` }],
+            [{ text: 'Deletar Categoria', callback_data: `delete_category_${idCategoryReference}`}],
+          ]
+      ).reply_markup,
     });
     ctx.scene.leave();
     await ctx.deleteMessage();

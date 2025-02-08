@@ -9,14 +9,14 @@ handleSubcategoryOptions.enter(async (ctx) => {
   try {
     const idSubCategoryReference = ctx.session.subcategoryId; 
     await ctx.reply(`Olá ${ctx.session?.userName ?? 'Usuário'}, escolha uma ação para subcategoria:`, {
-      reply_markup: Markup.inlineKeyboard([
+      reply_markup: Markup.inlineKeyboard(
         [
-          { text: 'Adicionar Produto', callback_data: `add_produto_${idSubCategoryReference}` },
-          { text: 'Listar produto', callback_data: `list_Produto_${idSubCategoryReference}` },
-          { text: 'Editar subcategoria', callback_data: `edit_subcategoria_${idSubCategoryReference}` },
-          { text: 'Deletar subcategoria', callback_data: `delete_subcategory_${idSubCategoryReference}` },
-        ],
-      ]).reply_markup,
+          [{ text: 'Adicionar Produto', callback_data: `add_produto_${idSubCategoryReference}` }],
+          [{ text: 'Listar produto', callback_data: `list_Produto_${idSubCategoryReference}` }],
+          [{ text: 'Editar subcategoria', callback_data: `edit_subcategoria_${idSubCategoryReference}` }],
+          [{ text: 'Deletar subcategoria', callback_data: `delete_subcategory_${idSubCategoryReference}` }]
+        ]
+      ).reply_markup,
     });
     ctx.scene.leave();
     await ctx.deleteMessage();

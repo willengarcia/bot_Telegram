@@ -1,16 +1,16 @@
 import { Scenes, Markup } from 'telegraf';
 import { MyContext } from '../../../src/types/MyContext';
-import { FindAllInfoFromItem } from '../../../src/produto/itens/findIntensInfo';
+import { FindAllItemToSubcategory } from '../../../src/produto/itens/findAllItensToSubcategory';
 
 const { BaseScene, Stage } = Scenes;
 
-const handleListItem = new BaseScene<MyContext>('infoItem');
+const handleListItem = new BaseScene<MyContext>('listItem');
 handleListItem.enter(async (ctx) => {
   try {
-    const idItem = ctx.session.idItem || 1;
-    const findAllItemFromItem  = new FindAllInfoFromItem();
-    const execute = await findAllItemFromItem.execute({idItem})
-    if (!execute.find || execute === 0) {
+    const idSubcategoryReference = ctx.session.subcategoryId || 1;
+    const findAllProdutoToSubcategory  = new FindAllItemToSubcategory();
+    const execute = await findAllProdutoToSubcategory.execute({idSubcategoryReference})
+    if (!execute.find || execute.find.length === 0) {
       await ctx.reply('Nenhum produto encontrada no momento.', {
         reply_markup: Markup.inlineKeyboard([
           [

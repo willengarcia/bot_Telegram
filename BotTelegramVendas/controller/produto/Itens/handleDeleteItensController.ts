@@ -1,16 +1,15 @@
 import { Scenes, Markup } from 'telegraf';
 import { MyContext } from '../../../src/types/MyContext';
-import { stage } from '../../../src/config/botConfig';
-import { DeleteSubCategory } from '../../../src/produto/subcategoria/deleteSubCategory';
+import { DeleteItens } from '../../../src/produto/itens/deleteItens';
 
 const { BaseScene, Stage } = Scenes;
 
-const handleDeleteSubcategory = new BaseScene<MyContext>('deleteSubcategory');
-handleDeleteSubcategory.enter(async (ctx) =>{
+const handleDeleteItem = new BaseScene<MyContext>('deleteItem');
+handleDeleteItem.enter(async (ctx) =>{
   try {
-    const idSubCategory = ctx.session.subcategoryId || 1
-    const deleteSubcategory = new DeleteSubCategory()
-    const execute = await deleteSubcategory.execute({idSubCategory})
+    const IdItem = ctx.session.idItem || 1
+    const deleteItem = new DeleteItens()
+    const execute = await deleteItem.execute({IdItem})
     if(execute.sucess === false){
       await ctx.reply(
         `${execute.message}`, {
@@ -39,7 +38,7 @@ handleDeleteSubcategory.enter(async (ctx) =>{
     }
   } catch (error) {
     await ctx.reply(
-      'Houve um erro ao editar a subcategoria. Tente novamente mais tarde. '+error, {
+      'Houve um erro ao Deletar o Produto. Tente novamente mais tarde. '+error, {
         reply_markup: {
           inline_keyboard: [
             [
@@ -51,4 +50,4 @@ handleDeleteSubcategory.enter(async (ctx) =>{
     );
   }
 })
-export default handleDeleteSubcategory
+export default handleDeleteItem

@@ -1,50 +1,50 @@
 import { PrismaClient } from '@prisma/client';
 
-interface DadosCategory {
-    idSubCategory:number;
+interface DadosItens {
+    IdItem:number;
 }
 
 const prisma = new PrismaClient();
 
-class DeleteSubCategory {
+class DeleteItens {
     async execute({
-        idSubCategory,
-    }: DadosCategory) {
+        IdItem,
+    }: DadosItens) {
         try {
             // há produtos na subcategoria?
-            const existItems = await prisma.subCategory.findFirst({
+            const existItems = await prisma.item.findFirst({
                 where: {
-                    id: idSubCategory,
-                    items:{
+                    id: IdItem,
+                    sales:{
                         some:{}
                     }
                 }
             });
 
             if (existItems) {
-                console.log('Há produtos nessa Subcategoria')
+                console.log('Há vendas nesse produto')
                 return {
                     sucess:false,
-                    message: 'Há produtos nessa subcategoria!'
+                    message: 'Há vendas nesse produto'
                 };
             }
 
             // deleta subcategoria
-            const deleteSubCategory = await prisma.subCategory.delete({
+            const deleteSubCategory = await prisma.item.delete({
                 where:{
-                    id:idSubCategory
+                    id:IdItem
                 }
             })
 
             return {
                 sucess:true,
                 isDelete:true,
-                message:'Subcategoria deletada com sucesso!'
+                message:'Produto deletado com sucesso!'
             };
 
         } catch (error) {
             // Tratamento de erro
-            console.error("Erro ao deletar SubCategoria:", error);
+            console.error("Erro ao deletar Produto:", error);
             return {
                 'sucess':false,
                 'error': error.message
@@ -53,4 +53,4 @@ class DeleteSubCategory {
     }
 }
 
-export { DeleteSubCategory };
+export { DeleteItens };
