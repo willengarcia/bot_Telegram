@@ -159,7 +159,7 @@ bot.action(/list_Produto_(\d+)/, async (ctx: MyContext) => {
   ctx.scene.enter('listItem');
 });
 
-// Mostrar opções do Porduto
+// Mostrar opções do Produto
 bot.action(/option_itens_(\d+)/, async (ctx: MyContext) => {
   const idItem = ctx.match[1];
   const userName = ctx.from.first_name+' '+ctx.from.last_name
@@ -185,6 +185,19 @@ bot.action(/edit_produto_(\d+)/, async (ctx: MyContext) => {
 
   ctx.session.subcategoryId = Number(idSubCategoryReference);
   ctx.scene.enter('editItem');
+});
+
+bot.action(/info_produto_(\d+)/, async (ctx: MyContext) => {
+  const idItem = ctx.match[1];
+  const userName = ctx.from.first_name+' '+ctx.from.last_name
+  ctx.session.userName = userName
+  if (!idItem) {
+    console.error('ID do Item não encontrado.');
+    return;
+  }
+
+  ctx.session.idItem = Number(idItem);
+  ctx.scene.enter('infoItem');
 });
 
 // Deletar Produto

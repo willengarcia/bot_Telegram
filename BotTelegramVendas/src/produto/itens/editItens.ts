@@ -3,6 +3,9 @@ import { PrismaClient } from '@prisma/client';
 interface DadosItens {
     nameItem: string;
     idItem:number;
+    price:string;
+    link?:string;
+    imagePath?:string;
 }
 
 const prisma = new PrismaClient();
@@ -10,7 +13,10 @@ const prisma = new PrismaClient();
 class EditItens {
     async execute({
         nameItem,
-        idItem
+        idItem,
+        price,
+        link,
+        imagePath,
     }: DadosItens) {
         try {
             // categoria existe
@@ -36,7 +42,10 @@ class EditItens {
                     id:idItem,
                 },
                 data:{
-                    name: nameItem
+                    name: nameItem,
+                    price:Number(price),
+                    link:link,
+                    imagePath:imagePath
                 }
             });
 

@@ -6,10 +6,10 @@ const { BaseScene, Stage } = Scenes;
 
 const handleEditItem = new BaseScene<MyContext>('editItem');
 handleEditItem.enter(async (ctx) =>{
-  await ctx.reply('Digite o novo nome para o Produto que selecionou!')
+  await ctx.reply('Digite os novos dados para o Produto que selecionou no seguinte formato: \n Nome \n Preco \n Link \n Imagem \n')
 })
 handleEditItem.on('text', async (ctx) =>{
-  const nameItem = (ctx.message as any).text;
+  const [nameItem, price, link, imagePath] = ctx.message.text.trim().split(/\r?\n/);
   const idItem = ctx.session.idItem || 1;
   // Verifica se o nome da subcategoria é válido
   if (!nameItem || nameItem.trim().length === 0) {
@@ -20,7 +20,12 @@ handleEditItem.on('text', async (ctx) =>{
   try {
     // Chama o método para editar a subcategoria
     const editItem = new EditItens();
-    await editItem.execute({ idItem, nameItem })
+    await editItem.execute({
+      nameItem,
+      idItem,
+      price,
+      link,
+      imagePath})
 
     // Responde com a confirmação de sucesso
     await ctx.reply(`Produto "${nameItem}" editado com sucesso!`, {
@@ -30,12 +35,10 @@ handleEditItem.on('text', async (ctx) =>{
         ],
       },
     });
-
-    console.log('Subcategoria alterada: ' + idItem);
   } catch (error) {
-    console.error('Erro ao editar a subcategoria:', error);
+    console.error('Erro ao editar o Produto:', error);
     await ctx.reply(
-      'Houve um erro ao editar a subcategoria. Tente novamente mais tarde.'
+      'Houve um erro ao editar o Produto. Tente novamente mais tarde.'
     );
   }
 })

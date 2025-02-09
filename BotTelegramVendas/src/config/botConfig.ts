@@ -16,6 +16,7 @@ import handleListItens from '../../controller/produto/Itens/handleListItensContr
 import handleItemOptions from '../../controller/produto/Itens/handleItensOptionsController'
 import handleEditItem from '../../controller/produto/Itens/handleEditItensController'
 import handleDeleteItem from '../../controller/produto/Itens/handleDeleteItensController'
+import handleInfoItens from '../../controller/produto/Itens/handleInfoItensController'
 import { MyContext } from '../types/MyContext';
 import 'dotenv/config';
 
@@ -47,5 +48,6 @@ stage.register(handleListItens)
 stage.register(handleItemOptions)
 stage.register(handleEditItem)
 stage.register(handleDeleteItem)
+stage.register(handleInfoItens)
 // Exportação do Stage para registro de cenas
 export { stage };

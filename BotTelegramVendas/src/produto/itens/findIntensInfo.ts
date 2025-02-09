@@ -7,15 +7,15 @@ interface DadosItens{
 class FindAllInfoFromItem {
     async execute({idItem}:DadosItens) {
         try {
-            const existItem = await prisma.item.findFirst()
-            if(!existItem){
+            const existInfo = await prisma.item.findFirst()
+            if(!existInfo){
                 return {
-                    success:false,
+                    sucess:false,
                     message:'Não há nenhuma informação para listar!'
                 }
             }
 
-            // Pesquisa todas as Subcategorias
+            // Pesquisa todas as informações
             const findAllItemFromItem = await prisma.item.findFirst({
                 where:{
                     id:idItem
@@ -26,10 +26,13 @@ class FindAllInfoFromItem {
                     imagePath:true,
                     link:true,
                     price:true,
-                    sales:true,
-                    category:{
+                    sales:{
                         select:{
-                            name:true
+                            user:{
+                                select:{
+                                    username:true,
+                                }
+                            }
                         }
                     },
                     subCategory:{
